@@ -1,0 +1,11 @@
+/* In assets/styles.css */
+@font-face {
+    font-family: 'DejaVu Sans';
+    src: url('/assets/DejaVuSans.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: 'DejaVu Sans', sans-serif;
+}

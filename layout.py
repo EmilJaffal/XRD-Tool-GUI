@@ -15,7 +15,6 @@ def create_file_control(index, filename):
             style={
                 'display': 'inline-block',
                 'width': '200px',
-                'fontWeight': 'bold',
                 'overflow': 'hidden',
                 'textOverflow': 'ellipsis',
                 'whiteSpace': 'nowrap'
@@ -38,7 +37,7 @@ def create_file_control(index, filename):
                 },
                 tooltip={"placement": "bottom", "always_visible": True}
             ),
-            style={'display': 'inline-block', 'margin-left': '10px', 'width': '80%'}
+            style={'display': 'inline-block', 'margin-left': '10px', 'width': '50%'}
         ),
         html.Label("Int", style={'margin-left': '20px'}),
         html.Div(
@@ -56,7 +55,7 @@ def create_file_control(index, filename):
                 },
                 tooltip={"placement": "bottom", "always_visible": True}
             ),
-            style={'display': 'inline-block', 'margin-left': '10px', 'width': '80%'}
+            style={'display': 'inline-block', 'margin-left': '10px', 'width': '50%'}
         )
     ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '20px'})
 
@@ -124,6 +123,8 @@ def create_layout(app):
         ], style={'display': 'inline-block'}),
     ], style={'margin': '20px 10px', 'textAlign': 'center'})
 
+    
+
     # Global slider controls.
     angle_marks = {i: {'label': str(i), 'style': {'fontSize': '18px'}} for i in range(0, 101, 10)}
     global_sep_marks = {i: {'label': str(i), 'style': {'fontSize': '18px'}} for i in range(0, 101, 10)}
@@ -155,6 +156,9 @@ def create_layout(app):
                 tooltip={"placement": "bottom", "always_visible": True}
             )
         ], style={'margin': '10px', 'width': '45%', "display": "inline-block"}),
+
+
+
         html.Div([
             html.Label("Global Separation", style={'fontSize': '18px'}),
             dcc.Slider(
