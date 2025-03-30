@@ -14,14 +14,14 @@ def create_file_control(index, filename):
             corrected_filename,
             style={
                 'display': 'inline-block',
-                'width': '200px',
+                'width': '225px',
                 'overflow': 'hidden',
                 'textOverflow': 'ellipsis',
                 'whiteSpace': 'nowrap'
             },
             title=corrected_filename
         ),
-        html.Label("BG", style={'margin-left': '20px'}),
+        html.Label("Level", style={'margin-left': '10px'}),
         html.Div(
             dcc.Slider(
                 id={'type': 'bg-slider', 'index': index},
@@ -37,9 +37,9 @@ def create_file_control(index, filename):
                 },
                 tooltip={"placement": "bottom", "always_visible": True}
             ),
-            style={'display': 'inline-block', 'margin-left': '10px', 'width': '50%'}
+            style={'display': 'inline-block', 'margin-left': '5px', 'width': '30%'}  # Shifted right by 60px
         ),
-        html.Label("Int", style={'margin-left': '20px'}),
+        html.Label("Intensity", style={'margin-left': '5px'}),
         html.Div(
             dcc.Slider(
                 id={'type': 'int-slider', 'index': index},
@@ -55,7 +55,7 @@ def create_file_control(index, filename):
                 },
                 tooltip={"placement": "bottom", "always_visible": True}
             ),
-            style={'display': 'inline-block', 'margin-left': '10px', 'width': '50%'}
+            style={'display': 'inline-block', 'margin-left': '5px', 'width': '30%'}  # Shifted right by 60px
         )
     ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '20px'})
 
@@ -127,38 +127,20 @@ def create_layout(app):
 
     # Global slider controls.
     angle_marks = {i: {'label': str(i), 'style': {'fontSize': '18px'}} for i in range(0, 101, 10)}
-    global_sep_marks = {i: {'label': str(i), 'style': {'fontSize': '18px'}} for i in range(0, 101, 10)}
-
+    
     global_controls = html.Div([
         html.Div([
-            html.Label("angle min", style={'fontSize': '18px'}),
-            dcc.Slider(
-                id='angle-min-slider',
+            html.Label("Angle Range", style={'fontSize': '18px'}),
+            dcc.RangeSlider(
+                id='angle-range-slider',
                 min=0,
                 max=100,
                 step=1,
-                value=10,
-                updatemode="drag",
+                value=[10, 90],  # Default range
                 marks=angle_marks,
                 tooltip={"placement": "bottom", "always_visible": True}
             )
-        ], style={'margin': '10px', 'width': '45%', "display": "inline-block"}),
-        html.Div([
-            html.Label("angle max", style={'fontSize': '18px'}),
-            dcc.Slider(
-                id='angle-max-slider',
-                min=0,
-                max=100,
-                step=1,
-                value=90,
-                updatemode="drag",
-                marks=angle_marks,
-                tooltip={"placement": "bottom", "always_visible": True}
-            )
-        ], style={'margin': '10px', 'width': '45%', "display": "inline-block"}),
-
-
-
+        ], style={'margin': '20px', 'width': '90%'}),
         html.Div([
             html.Label("Global Separation", style={'fontSize': '18px'}),
             dcc.Slider(
@@ -168,7 +150,7 @@ def create_layout(app):
                 step=1,
                 value=0,
                 updatemode="drag",
-                marks=global_sep_marks,
+                marks={i: {'label': str(i), 'style': {'fontSize': '18px'}} for i in range(0, 101, 10)},
                 tooltip={"placement": "bottom", "always_visible": True}
             )
         ], style={'margin': '20px', 'width': '90%'})
@@ -211,7 +193,7 @@ def create_layout(app):
     )
 
     save_white_button = html.Button(
-        "Save Plot (White BG)", 
+        "Save Plot (White)", 
         id="save-white-button", 
         n_clicks=0, 
         style={

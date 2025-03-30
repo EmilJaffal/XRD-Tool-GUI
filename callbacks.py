@@ -4,9 +4,24 @@ from dash import dcc, Input, Output, State, ALL, callback_context
 import plotly.io as pio
 import numpy as np
 import io
+from dash import html
 
 from utils import generate_figure, parse_contents
 from layout import create_file_control
+
+download_component = dcc.Download(id="download")
+
+save_white_button = html.Button(
+    "Save Plot (White)", 
+    id="save-white-button", 
+    n_clicks=0
+)
+
+save_transparent_button = html.Button(
+    "Save Plot (Transparent)", 
+    id="save-transparent-button", 
+    n_clicks=0
+)
 
 def compute_default_angles(files):
     """
@@ -72,15 +87,14 @@ def register_callbacks(app):
     # Callback: Update the graph based on slider inputs, files, and legend visibility.
     @app.callback(
         Output('graph', 'figure'),
-        Input('angle-min-slider', 'value'),
-        Input('angle-max-slider', 'value'),
+        Input('angle-range-slider', 'value'),  # Updated to use the range slider
         Input('global-sep-slider', 'value'),
         Input({'type': 'bg-slider', 'index': ALL}, 'value'),
         Input({'type': 'int-slider', 'index': ALL}, 'value'),
         Input('file-store', 'data'),
-        Input('legend-store', 'data')  # <--- Legend visibility
+        Input('legend-store', 'data')  # Legend visibility
     )
-    def update_graph(angle_min, angle_max, global_sep, bg_values, int_values, files, show_legend):
+    def update_graph(angle_range, global_sep, bg_values, int_values, files, show_legend):
         if not files:
             return go.Figure()
         # Ensure slider values lists match the number of files.
@@ -89,8 +103,9 @@ def register_callbacks(app):
         if not int_values or len(int_values) != len(files):
             int_values = [100] * len(files)
 
+        angle_min, angle_max = angle_range  # Extract min and max from the range slider
         fig = generate_figure(angle_min, angle_max, global_sep, bg_values, int_values, files)
-        # Here we apply the legend visibility:
+        # Apply the legend visibility:
         fig.update_layout(
             legend=dict(
                 font=dict(family="Dejavu Sans", size=20),
@@ -103,28 +118,26 @@ def register_callbacks(app):
         )
         return fig
 
-    # Combined Callback: Update angle sliders from file-store changes, reset-button, or graph relayout.
+    # Combined Callback: Update angle range slider from file-store changes, reset-button, or graph relayout.
     @app.callback(
-        Output('angle-min-slider', 'value'),
-        Output('angle-max-slider', 'value'),
+        Output('angle-range-slider', 'value'),  # Updated to use the range slider
         Input('file-store', 'data'),
         Input('graph', 'relayoutData'),
         Input('reset-button', 'n_clicks'),
-        State('angle-min-slider', 'value'),
-        State('angle-max-slider', 'value')
+        State('angle-range-slider', 'value')  # Updated to use the range slider
     )
-    def update_angle_sliders_combined(files, relayoutData, n_clicks, current_min, current_max):
+    def update_angle_range_slider(files, relayoutData, n_clicks, current_range):
         ctx = callback_context
         if not ctx.triggered:
-            return current_min, current_max
+            return current_range
 
         trigger = ctx.triggered[0]['prop_id']
         # If file-store was updated or reset is clicked, update to computed defaults.
         if trigger.startswith("file-store") or trigger.startswith("reset-button"):
             if files:
                 new_min, new_max = compute_default_angles(files)
-                return new_min, new_max
-            return 10, 90
+                return [new_min, new_max]
+            return [10, 90]
 
         # If the graph relayout triggered this callback.
         if trigger.startswith("graph"):
@@ -132,18 +145,18 @@ def register_callbacks(app):
                 if 'xaxis.autorange' in relayoutData:
                     if files:
                         new_min, new_max = compute_default_angles(files)
-                        return new_min, new_max
-                    return 10, 90
+                        return [new_min, new_max]
+                    return [10, 90]
                 if 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
                     try:
                         new_min = float(relayoutData['xaxis.range[0]'])
                         new_max = float(relayoutData['xaxis.range[1]'])
-                        return new_min, new_max
+                        return [new_min, new_max]
                     except Exception:
                         pass
-            return current_min, current_max
+            return current_range
 
-        return current_min, current_max
+        return current_range
 
     # Callback: Reset global separation and per-file controls.
     @app.callback(
@@ -178,55 +191,73 @@ def register_callbacks(app):
             return {'position': 'relative', 'width': '100%', 'paddingBottom': '75%'}
 
     # Callback: Save the current plot in high resolution using the selected ratio.
-        # Callback: Save the current plot in high resolution using the selected ratio.
     @app.callback(
         Output("download", "data"),
         Input("save-white-button", "n_clicks"),
         Input("save-transparent-button", "n_clicks"),
-        State('angle-min-slider', 'value'),
-        State('angle-max-slider', 'value'),
+        State('angle-range-slider', 'value'),
         State('global-sep-slider', 'value'),
         State({'type': 'bg-slider', 'index': ALL}, 'value'),
         State({'type': 'int-slider', 'index': ALL}, 'value'),
         State('file-store', 'data'),
         State('width-ratio-input', 'value'),
         State('height-ratio-input', 'value'),
-        State('legend-store', 'data'),  # New state to capture legend toggle
+        State('legend-store', 'data'),
         prevent_initial_call=True
     )
-    def save_plot(n_white, n_transparent, angle_min, angle_max, global_sep,
+    def save_plot(n_white, n_transparent, angle_range, global_sep,
                   bg_values, int_values, files, width_ratio, height_ratio, show_legend):
-        if not files:
-            return dash.no_update
-        
-        # Generate the figure as usual.
-        fig = generate_figure(angle_min, angle_max, global_sep, bg_values, int_values, files)
-        
+        print("Save plot callback triggered")
         ctx = callback_context
         if not ctx.triggered:
+            print("No trigger detected")
             raise dash.exceptions.PreventUpdate
         trigger = ctx.triggered[0]['prop_id']
-        
-        # If the transparent button was clicked, set a transparent background.
+        print(f"Triggered by: {trigger}")
+
+        if not files:
+            print("No files available")
+            return dash.no_update
+
+        angle_min, angle_max = angle_range
+        print(f"Angle range: {angle_min} - {angle_max}")
+
+        # Generate the figure
+        fig = generate_figure(angle_min, angle_max, global_sep, bg_values, int_values, files)
+        print(f"Generated figure: {fig}")
+
+        # Set background based on button clicked
         if trigger.startswith("save-transparent-button"):
             fig.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)"
             )
-        # Otherwise (save-white-button), keep white background.
-        
-        # Apply the legend configuration and visibility.
+
+        # Apply font and legend visibility
         fig.update_layout(
+            font=dict(family="Microsoft Sans Serif", size=18, color="black"),  # Apply font globally
             legend=dict(
-                font=dict(family="Dejavu Sans", size=20),
+                font=dict(family="Microsoft Sans Serif", size=18),
                 yanchor='top',
                 xanchor='right',
                 x=0.99,
                 y=0.99,
             ),
+            title=dict(
+                font=dict(family="Microsoft Sans Serif", size=18)
+            ),
+            xaxis=dict(
+                title=dict(font=dict(family="Microsoft Sans Serif", size=18)),
+                tickfont=dict(family="Microsoft Sans Serif", size=18)
+            ),
+            yaxis=dict(
+                title=dict(font=dict(family="Microsoft Sans Serif", size=18)),
+                tickfont=dict(family="Microsoft Sans Serif", size=18)
+            ),
             showlegend=show_legend
         )
-        
+
+        # Generate image bytes
         try:
             w_ratio = float(width_ratio)
             h_ratio = float(height_ratio)
@@ -234,14 +265,20 @@ def register_callbacks(app):
         except Exception:
             height = 600
 
-        img_bytes = pio.to_image(fig, format='png', width=800, height=height, scale=4)
+        try:
+            img_bytes = pio.to_image(fig, format='png', width=800, height=height, scale=4)
+        except Exception as e:
+            print(f"Error generating image: {e}")
+            raise dash.exceptions.PreventUpdate
+
         def write_bytes(bytes_io):
             bytes_io.write(img_bytes)
-        
-        # Set filename based on button type.
+
+        # Set filename
         if trigger.startswith("save-white-button"):
             filename = "plot_white.png"
         else:
             filename = "plot_transparent.png"
-        
+
+        print(f"Saving file: {filename}")
         return dcc.send_bytes(write_bytes, filename)
