@@ -45,7 +45,8 @@ def generate_figure(angle_min, angle_max, global_sep, bg_values, int_values, fil
             y_normalized = (y_smoothed - y_min) / (y_max - y_min)
         y_scaled = y_normalized * intensity
         
-        final_y = y_scaled + bg + (idx * global_sep)
+        # Keep graph stacking direction aligned with legend order.
+        final_y = y_scaled + bg + ((len(files) - 1 - idx) * global_sep)
         
         fig.add_trace(go.Scatter(
             x=x_filtered,

@@ -5,6 +5,7 @@ import plotly.io as pio
 import numpy as np
 import io
 from dash import html
+import re
 
 from utils import generate_figure, parse_contents
 from layout import create_file_control
@@ -22,6 +23,17 @@ save_transparent_button = html.Button(
     id="save-transparent-button", 
     n_clicks=0
 )
+
+
+def extract_sort_value(filename):
+    """Return numeric sort key from filename; non-numeric names sort last."""
+    ta_match = re.search(r'Ta([0-9]+(?:\.[0-9]+)?)', filename)
+    if ta_match:
+        return float(ta_match.group(1))
+    generic_match = re.search(r'([0-9]+(?:\.[0-9]+)?)', filename)
+    if generic_match:
+        return float(generic_match.group(1))
+    return float('inf')
 
 def compute_default_angles(files):
     """
@@ -57,11 +69,19 @@ def register_callbacks(app):
             if not isinstance(upload_contents, list):
                 upload_contents = [upload_contents]
                 upload_filenames = [upload_filenames]
-            new_files = [
-                {"filename": fname, "content": parse_contents(contents)}
-                for contents, fname in zip(upload_contents, upload_filenames)
-            ]
+            new_files = []
+            for contents, fname in zip(upload_contents, upload_filenames):
+                if not fname or not fname.lower().endswith('.xy'):
+                    continue
+                new_files.append({"filename": fname, "content": parse_contents(contents)})
             current_files.extend(new_files)
+            def legend_sort_key(file_entry):
+                value = extract_sort_value(file_entry["filename"])
+                if value == float('inf'):
+                    return (1, 0.0)
+                return (0, -value)
+
+            current_files = sorted(current_files, key=legend_sort_key)
         return current_files
 
     # Callback: Update per-file controls based on current files.

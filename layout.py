@@ -63,6 +63,7 @@ def create_layout(app):
     # Upload component for drag & drop .xy files with a light grey background.
     upload_component = dcc.Upload(
         id="upload-data",
+        accept=".xy",
         children=html.Div(
             "Drop .xy file(s) here or Click to upload",
             style={'width': '100%', 'textAlign': 'center'}
