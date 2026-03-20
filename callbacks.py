@@ -285,10 +285,34 @@ def register_callbacks(app):
         except Exception:
             height = 600
 
-        try:
-            img_bytes = pio.to_image(fig, format='png', width=800, height=height, scale=4)
-        except Exception as e:
-            print(f"Error generating image: {e}")
+        # Some hosted environments are stricter on resources/headless rendering.
+        # Try high quality first, then progressively lower quality to avoid hard failures.
+        export_attempts = [
+            {"width": 800, "height": height, "scale": 4},
+            {"width": 800, "height": height, "scale": 2},
+            {"width": 700, "height": max(500, int(height * 0.9)), "scale": 2},
+            {"width": 700, "height": max(500, int(height * 0.9)), "scale": 1},
+        ]
+
+        img_bytes = None
+        last_error = None
+        for opts in export_attempts:
+            try:
+                img_bytes = pio.to_image(
+                    fig,
+                    format='png',
+                    width=opts["width"],
+                    height=opts["height"],
+                    scale=opts["scale"],
+                    engine='kaleido'
+                )
+                break
+            except Exception as e:
+                last_error = e
+                print(f"Image export failed with options {opts}: {e}")
+
+        if img_bytes is None:
+            print(f"Error generating image after all fallbacks: {last_error}")
             raise dash.exceptions.PreventUpdate
 
         def write_bytes(bytes_io):
