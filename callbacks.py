@@ -6,9 +6,12 @@ import numpy as np
 import io
 from dash import html
 import re
+import json
 
 from utils import generate_figure, parse_contents
 from layout import create_file_control
+
+Y_AXIS_DOMAIN_75 = [0.125, 0.875]
 
 download_component = dcc.Download(id="download")
 
@@ -94,6 +97,62 @@ def register_callbacks(app):
             return []
         return [create_file_control(i, file["filename"]) for i, file in enumerate(files)]
 
+    @app.callback(
+        Output("file-store", "data", allow_duplicate=True),
+        Output({'type': 'bg-slider', 'index': ALL}, 'value', allow_duplicate=True),
+        Output({'type': 'int-slider', 'index': ALL}, 'value', allow_duplicate=True),
+        Input({'type': 'move-up-button', 'index': ALL}, 'n_clicks'),
+        Input({'type': 'move-down-button', 'index': ALL}, 'n_clicks'),
+        State("file-store", "data"),
+        State({'type': 'bg-slider', 'index': ALL}, 'value'),
+        State({'type': 'int-slider', 'index': ALL}, 'value'),
+        prevent_initial_call=True
+    )
+    def reorder_files_for_legend(up_clicks, down_clicks, files, bg_values, int_values):
+        if not files:
+            raise dash.exceptions.PreventUpdate
+
+        ctx = callback_context
+        if not ctx.triggered:
+            raise dash.exceptions.PreventUpdate
+
+        triggered_prop = ctx.triggered[0].get('prop_id', '')
+        triggered_id_part = triggered_prop.split('.')[0] if triggered_prop else ''
+        try:
+            triggered_id = json.loads(triggered_id_part)
+        except Exception:
+            triggered_id = None
+
+        if not isinstance(triggered_id, dict):
+            raise dash.exceptions.PreventUpdate
+
+        idx = triggered_id.get('index')
+        button_type = triggered_id.get('type')
+        if idx is None or button_type not in ('move-up-button', 'move-down-button'):
+            raise dash.exceptions.PreventUpdate
+
+        if idx < 0 or idx >= len(files):
+            raise dash.exceptions.PreventUpdate
+
+        if not bg_values or len(bg_values) != len(files):
+            bg_values = [0] * len(files)
+        if not int_values or len(int_values) != len(files):
+            int_values = [100] * len(files)
+
+        target_idx = idx - 1 if button_type == 'move-up-button' else idx + 1
+        if target_idx < 0 or target_idx >= len(files):
+            raise dash.exceptions.PreventUpdate
+
+        reordered_files = files.copy()
+        reordered_bg = bg_values.copy()
+        reordered_int = int_values.copy()
+
+        reordered_files[idx], reordered_files[target_idx] = reordered_files[target_idx], reordered_files[idx]
+        reordered_bg[idx], reordered_bg[target_idx] = reordered_bg[target_idx], reordered_bg[idx]
+        reordered_int[idx], reordered_int[target_idx] = reordered_int[target_idx], reordered_int[idx]
+
+        return reordered_files, reordered_bg, reordered_int
+
     # Callback: Toggle the legend store (flip True/False) when legend button is clicked.
     @app.callback(
         Output("legend-store", "data"),
@@ -130,12 +189,14 @@ def register_callbacks(app):
             legend=dict(
                 font=dict(family="Dejavu Sans", size=20),
                 yanchor='top',
-                xanchor='right',
-                x=0.99,
-                y=0.99,
+                xanchor='left',
+                x=1.02,
+                y=Y_AXIS_DOMAIN_75[1],
+                traceorder='normal'
             ),
             showlegend=show_legend
         )
+        fig.update_yaxes(domain=Y_AXIS_DOMAIN_75)
         return fig
 
     # Combined Callback: Update angle range slider from file-store changes, reset-button, or graph relayout.
@@ -259,9 +320,10 @@ def register_callbacks(app):
             legend=dict(
                 font=dict(family="Microsoft Sans Serif", size=18),
                 yanchor='top',
-                xanchor='right',
-                x=0.99,
-                y=0.99,
+                xanchor='left',
+                x=1.02,
+                y=Y_AXIS_DOMAIN_75[1],
+                traceorder='normal'
             ),
             title=dict(
                 font=dict(family="Microsoft Sans Serif", size=18)
@@ -276,6 +338,7 @@ def register_callbacks(app):
             ),
             showlegend=show_legend
         )
+        fig.update_yaxes(domain=Y_AXIS_DOMAIN_75)
 
         # Generate image bytes
         try:

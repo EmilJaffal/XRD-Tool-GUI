@@ -56,6 +56,35 @@ def create_file_control(index, filename):
                 tooltip={"placement": "bottom", "always_visible": True}
             ),
             style={'display': 'inline-block', 'margin-left': '5px', 'width': '30%'}  # Shifted right by 60px
+        ),
+        html.Div(
+            [
+                html.Button(
+                    "↑",
+                    id={'type': 'move-up-button', 'index': index},
+                    n_clicks=0,
+                    title='Move up in legend',
+                    style={
+                        'width': '36px',
+                        'height': '36px',
+                        'fontSize': '18px',
+                        'marginLeft': '10px'
+                    }
+                ),
+                html.Button(
+                    "↓",
+                    id={'type': 'move-down-button', 'index': index},
+                    n_clicks=0,
+                    title='Move down in legend',
+                    style={
+                        'width': '36px',
+                        'height': '36px',
+                        'fontSize': '18px',
+                        'marginLeft': '6px'
+                    }
+                )
+            ],
+            style={'display': 'flex', 'alignItems': 'center'}
         )
     ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '20px'})
 
@@ -147,11 +176,11 @@ def create_layout(app):
             dcc.Slider(
                 id='global-sep-slider',
                 min=0,
-                max=100,
+                max=150,
                 step=1,
                 value=0,
                 updatemode="drag",
-                marks={i: {'label': str(i), 'style': {'fontSize': '18px'}} for i in range(0, 101, 10)},
+                marks={i: {'label': str(i), 'style': {'fontSize': '18px'}} for i in range(0, 151, 10)},
                 tooltip={"placement": "bottom", "always_visible": True}
             )
         ], style={'margin': '20px', 'width': '90%'})
